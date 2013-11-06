@@ -1,68 +1,68 @@
-import unicorn, cherrypy, json, time, os, sys, signal
-from optparse import OptionParser
 from datetime import datetime, timedelta
-import database as db
-from sqlalchemy import func
+from optparse import OptionParser
+import json
+import os
+import signal
+import sys
+import time
+
+CURRENT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIRECTORY = os.path.split(CURRENT_DIRECTORY)[0]
+LIB_PATH = os.path.join(CURRENT_DIRECTORY, 'lib')
+
+sys.path.append(PARENT_DIRECTORY)
+sys.path.append(LIB_PATH)
+sys.path.append(os.path.join(LIB_PATH, 'cherrypy'))
+
 from cherrypy.lib.static import serve_file
+from sqlalchemy import func
+import cherrypy
+
+from unicorn import database as db
 __version__ = '0.0.1'
 
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
-class Unicorn:
+class Unicorn(object):
+    @cherrypy.expose
+    def index(self):
+        return serve_file(os.path.join(static_dir,'index.html'))
 
-	@cherrypy.expose
-	def index(self):
-		return serve_file(os.path.join(static_dir,'index.html'))
+    @cherrypy.expose
+    def aggregate(self):
+        print dir(func)
+        agg_logs = db.Session.query(
+            db.Log.site_id,
+            db.Log.track_type,
+            func.max(db.Log.datestamp)
+        ).group_by(
+            db.Log.site_id,
+            db.Log.track_type
+        ).all()
+        now = time.time()
+        out = [{
+            'site_id':al.site_id,
+            'datestamp':al[2],
+            'time_ago': str(timedelta(seconds = int(now - al[2]))),
+            'track_type': al.track_type
+        } for al in agg_logs]
+        db.Session.close()
 
-	@cherrypy.expose
-	def aggregate(self):
-		agg_logs = db.Session.query(
-					db.Log.site_id, 
-					db.Log.track_type,
-					func.max(db.Log.datestamp)
-				).group_by(db.Log.site_id, db.Log.track_type).all()
-		out = [{'site_id':al.site_id, 'datestamp':al[2], 'track_type': al.track_type} for al in agg_logs]
+        return json.dumps(out)
 
-		db.Session.close()
-		return json.dumps(out)
+    @cherrypy.expose
+    def track(self, track_type, site_id, data=None):
+        le = db.Log(
+            datestamp=time.time(),
+            track_type=track_type,
+            site_id=site_id,
+            data=data
+        )
+        db.Session.add(le)
+        db.Session.commit()
+        db.Session.close()
+        return 'thanks'
 
-
-	@cherrypy.expose
-	def problems(self):
-		comp = time.time() #	- 60*60	
-		agg_logs = db.Session.query(
-					db.Log.site_id, 
-					db.Log.track_type,
-					func.max(db.Log.datestamp)
-				).group_by(db.Log.site_id, db.Log.track_type).all()
-		results = [
-				{
-					'site_id':al.site_id, 
-					'time_ago': str(timedelta(seconds=  int(time.time() - al[2]))), 
-					'track_type': al.track_type
-				} 
-			for al in agg_logs if al[2]<comp
-		]
-		db.Session.close()
-
-		template = """<div>%(site_id)s last updated %(track_type)s %(time_ago)s ago</div>"""
-
-		out = ''
-		for item in results:
-			out += template % item
-
-		return out
-
-	@cherrypy.expose
-	def track(self, track_type, site_id):
-		le = db.Log()
-		le.datestamp = time.time()
-		le.track_type = track_type
-		le.site_id = site_id
-		db.Session.add(le)
-		db.Session.commit()
-		db.Session.close()
-		return 'thanks'
 
 def command_line_handler():
     usage = """Usage: %prog [options]
@@ -132,14 +132,23 @@ note: requires postgres database server that it can connect to
                         action='store',
                         help='Location of pid file when daemonizing, default /var/run/unicorn.pid')
     options, args = parser.parse_args()
-    return options, args, parser
+    return options, args
+
 
 def main():
     # http://bugs.python.org/issue7980 - Need to load strptime from main thread
     # so that it does not complain later in the process
     datetime.strptime('2010-01-01 00:00:00.000000', '%Y-%m-%d %H:%M:%S.%f')
 
-    options, args, parser = command_line_handler()
+    options, args = command_line_handler()
+
+    ################################################
+    #       Sort out CherryPy
+    ################################################
+
+    #Make AutoReloader exit not restart
+    cherrypy.engine._restart = cherrypy.engine.restart
+    cherrypy.engine.restart = cherrypy.engine.exit
 
     cherrypy.tree.mount(Unicorn(), '/', {
         '/static': {
@@ -156,7 +165,9 @@ def main():
     cherrypy.server.socket_host = options.ip_address
     cherrypy.server.socket_port = options.port
 
-
+    ################################################
+    #       Database setup
+    ################################################
 
     db.set_up(
         options.db_user,
@@ -166,13 +177,13 @@ def main():
         options.db_port
     )
     if options.reset:
-        print 'Resetting trailerpark database'
+        print 'Resetting unicorn database'
         db.tear_down(
-	        options.db_user,
-	        options.db_password,
-	        options.db_name,
-	        options.db_host,
-	        options.db_port
+            options.db_user,
+            options.db_password,
+            options.db_name,
+            options.db_host,
+            options.db_port
         )
     db.create_tables(
         options.db_user,
@@ -181,6 +192,11 @@ def main():
         options.db_host,
         options.db_port
     )
+
+    ################################################
+    #       Process management
+    ################################################
+
     if options.stop:
         try:
             with open(options.pid_file, 'r') as f:
@@ -188,10 +204,9 @@ def main():
                 print 'Stutting down service with PID %d' % pid
                 os.kill(pid, signal.SIGTERM)
                 os.remove(options.pid_file)
-                sys.exit(1)
         except IOError:
             print 'No PID file found, aborting shutdown.'
-            sys.exit(1)
+        sys.exit(1)
 
     if options.daemon:
         from cherrypy.process.plugins import Daemonizer, PIDFile
@@ -211,15 +226,11 @@ def main():
     try:
         cherrypy.engine.start()
     except IOError:
-        print 'Unable to bind to address ({0}, {1}'.format(options.ip_address, cherrypy.port)
+        print 'Unable to bind to address {0}:{1}'.format(options.ip_address, cherrypy.port)
         sys.exit(1)
     cherrypy.engine.wait(cherrypy.process.wspbus.states.STARTED)
     cherrypy.engine.block()  # Wait until the app is started before proceeding
 
 
-
-
-
 if __name__ == '__main__':
     main()
-    print 'what'

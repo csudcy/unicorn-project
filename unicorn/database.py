@@ -87,4 +87,4 @@ class Log(Base):
     datestamp   = Column(Float())
     track_type = Column(String(50))
     site_id  = Column(String(30))
-
+    data = Column(String(512))

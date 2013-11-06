@@ -10,3 +10,12 @@
 div {
 	text-align: center;
 }
+
+table {
+	width: 700px;
+	margin: 10px auto;
+}
+
+table, table th, table td {
+	border: 1px solid black;
+}

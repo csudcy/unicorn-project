@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<title>Unicorn</title>
-		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>	
+		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
 		<meta name="viewport" content="width=device-width, user-scalable=no">
 		<!--dependencies-->
 		<link href="static/all.css" rel="stylesheet">
@@ -12,27 +12,43 @@
 	<body>
 		<div class="unicorn"></div>
 		<div class="desciption">Project Unicorn has the following problems:</div>
-		<div class="problems" id="problems">
+		<div class="problems">
+			<table>
+				<thead>
+					<tr>
+						<th>Site</th>
+						<th>Type</th>
+						<th>Age</th>
+					</tr>
+				</thead>
+				<tbody id="problems">
 
+				</tbody>
+			</table>
 		</div>
 	</body>
 	<script type="text/javascript">
 		function updateProblems() {
-		    var xmlhttp;
-		    xmlhttp = new XMLHttpRequest();
+			var xmlhttp = new XMLHttpRequest();
 
-		    xmlhttp.onreadystatechange = function() {
-	    		console.log(xmlhttp.responseText)
-	    		console.log(xmlhttp)
-		        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-		            document.getElementById("problems").innerHTML = xmlhttp.responseText;
-		        }
-		    }
+			xmlhttp.onreadystatechange = function() {
+				if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+					var results = JSON.parse(xmlhttp.responseText);
+					var html = '';
+					results.forEach(function(result) {
+						html += '<tr>'+
+								'<td>'+result.site_id+'</td>'+
+								'<td>'+result.track_type+'</td>'+
+								'<td>'+result.time_ago+'</td>'+
+							'</tr>\n';
+					});
+					document.getElementById("problems").innerHTML = html;
+				}
+			}
 
-		    xmlhttp.open("GET", "/problems", true);
-		    xmlhttp.send();
-		    setTimeout(updateProblems,2*1000);
-	    }
-	    updateProblems();
-		</script>
+			xmlhttp.open("GET", "/aggregate", true);
+			xmlhttp.send();
+		}
+		setInterval(updateProblems, 2*1000);
+	</script>
 </html>
