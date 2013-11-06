@@ -38,6 +38,9 @@ class Unicorn(object):
         ).group_by(
             db.Log.site_id,
             db.Log.track_type
+        ).order_by(
+            db.Log.site_id,
+            db.Log.track_type
         ).all()
         now = time.time()
         out = [{
