@@ -1,0 +1,6 @@
+*.pyc
+
+thumbs.db
+
+build
+*.egg*

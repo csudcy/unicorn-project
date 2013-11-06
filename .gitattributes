@@ -1,0 +1,20 @@
+#Assume everything is binary so nothing gets screwed up
+*	binary
+
+#All hail to the linefeed.
+.gitattributes	diff text eol=lf
+.gitignore	diff text eol=lf
+*.css	diff text eol=lf
+*.handlebars	diff text eol=lf
+*.html	diff text eol=lf
+*.js	diff text eol=lf
+*.md	diff text eol=lf
+*.py	diff text eol=lf
+*.sql	diff text eol=lf
+*.txt	diff text eol=lf
+
+#Pretty sure batch files need to be windows...
+*.bat	diff text eol=crlf
+
+#Dont ever change any of the libs
+unicorn/lib/*	binary
