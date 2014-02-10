@@ -17,11 +17,79 @@ sys.path.append(os.path.join(LIB_PATH, 'cherrypy'))
 from cherrypy.lib.static import serve_file
 from sqlalchemy import func
 import cherrypy
+import requests
 
 from unicorn import database as db
 __version__ = '0.0.1'
 
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+
+PRODUCER = {
+    'BASE_URL': 'https://producer.artsalliancemedia.com/',
+    'USER': 'adfuser',
+    'PASS': '[c0ldfus10n]'
+}
+
+SITE_LOOKUP = {}
+SITE_LOOKUP_NEXT_LOAD = 0
+def get_site_names():
+    """
+    Get a lookup of cadien_id -> name from Producer
+    Cached for 10 minutes
+    """
+    global SITE_LOOKUP, SITE_LOOKUP_NEXT_LOAD
+    if SITE_LOOKUP_NEXT_LOAD < time.time():
+        SITE_LOOKUP = _get_site_names()
+        SITE_LOOKUP_NEXT_LOAD = time.time() + 10*60
+    return SITE_LOOKUP
+
+def _get_site_names():
+    print 'LOADING SITES FROM PRODUCER!'
+    def producer_get(url, params=None):
+        #Get the sites from Producer
+        params = params or {}
+
+        response = requests.get(
+            PRODUCER['BASE_URL']+url,
+            verify = False,
+            params = {
+                'username': PRODUCER['USER'],
+                'password': PRODUCER['PASS'],
+            }
+        )
+        response.raise_for_status()
+        result = response.json()
+        #Copied from adfuser/producer/endpoint.py
+        if 'messages' in result and result['messages']:
+            raise Exception('Producer returned messages: {0}'.format(result['messages']))
+        if 'data' not in result:
+            raise Exception(
+                'Expected Producer to return a result with "data" key (returned keys were {0}).'.format(
+                    result.keys()
+                ))
+        data = result['data']
+        filtered_count = data.pop('count', None)
+        if len(data.keys()) != 1:
+            raise Exception(
+                'Expected Producer to return data with a single key (returned keys were {0}).'.format(
+                    data.keys()
+                ))
+        return data.values()[0]
+
+    #Get stuff from Producer
+    site_maps = producer_get(
+        '/circuit_core/complex_maps',
+        params={
+            'q': json.dumps({'source':'cadien'})
+        }
+    )
+
+    #Make a lookup for the complexes
+    site_lookup = {}
+    for site_map in site_maps:
+        site_lookup[str(site_map['external_id'])] = site_map['name']
+
+    return site_lookup
 
 class Unicorn(object):
     @cherrypy.expose
@@ -30,7 +98,16 @@ class Unicorn(object):
 
     @cherrypy.expose
     def aggregate(self):
-        print dir(func)
+
+        #Get the site names
+        site_lookup = {}
+        try:
+            site_lookup = get_site_names()
+        except Exception, ex:
+            print 'Error retrieving complexes from Producer:'
+            print ex
+
+        #Get the latest logs
         agg_logs = db.Session.query(
             db.Log.site_id,
             db.Log.track_type,
@@ -43,8 +120,11 @@ class Unicorn(object):
             db.Log.track_type
         ).all()
         now = time.time()
+
+        #Construct the return structure
         out = [{
             'site_id':al.site_id,
+            'site_name': site_lookup.get(al.site_id, 'Unknown - %s' % al.site_id),
             'datestamp':al[2],
             'time_ago': str(timedelta(seconds = int(now - al[2]))),
             'track_type': al.track_type

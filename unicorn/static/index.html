@@ -34,10 +34,18 @@
 			xmlhttp.onreadystatechange = function() {
 				if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
 					var results = JSON.parse(xmlhttp.responseText);
+					//Sort the results nicely
+					results.sort(function(a, b) {
+						if (a.site_name !== b.site_name) {
+							return a.site_name - b.site_name;
+						}
+						return a.track_type - b.track_type;
+					});
+					//Build the html output
 					var html = '';
 					results.forEach(function(result) {
 						html += '<tr>'+
-								'<td>'+result.site_id+'</td>'+
+								'<td>'+result.site_name+'</td>'+
 								'<td>'+result.track_type+'</td>'+
 								'<td>'+result.time_ago+'</td>'+
 							'</tr>\n';
@@ -49,6 +57,7 @@
 			xmlhttp.open("GET", "/aggregate", true);
 			xmlhttp.send();
 		}
+		updateProblems();
 		setInterval(updateProblems, 2*1000);
 	</script>
 </html>
