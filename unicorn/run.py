@@ -20,7 +20,7 @@ import cherrypy
 import requests
 
 from unicorn import database as db
-__version__ = '0.0.1'
+from . import unicorn
 
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
@@ -151,7 +151,7 @@ def command_line_handler():
     usage = """Usage: %prog [options]
 note: requires postgres database server that it can connect to
     """
-    parser = OptionParser(usage=usage, version='Unicorn '+__version__)
+    parser = OptionParser(usage=usage, version='Unicorn '+unicorn.__version__)
     parser.add_option('-d', '--daemon',
                         dest='daemon',
                         default=False,
