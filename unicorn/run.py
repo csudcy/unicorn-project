@@ -20,7 +20,7 @@ import cherrypy
 import requests
 
 from unicorn import database as db
-from . import unicorn
+import unicorn
 
 static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 
