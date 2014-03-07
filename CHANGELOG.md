@@ -1,6 +1,13 @@
 Unicorn Changelog
 ===============
 
+0.0.4
+-----
+
+* Added colour coding to UI to easily show sites which have not reported in recently
+* Hopefully fixed sorting of results on the frontend
+
+
 0.0.3
 -----
 

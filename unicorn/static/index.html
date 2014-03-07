@@ -34,13 +34,6 @@
             xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var results = JSON.parse(xmlhttp.responseText);
-                    //Sort the results nicely
-                    results.sort(function(a, b) {
-                        if (a.site_name !== b.site_name) {
-                            return a.site_name - b.site_name;
-                        }
-                        return a.track_type - b.track_type;
-                    });
                     //Build the html output
                     var html = '';
                     results.forEach(function(result) {
@@ -53,8 +46,8 @@
                         }
 
                         //Colour code the age column (alpha the colour in as age
-                        //approaches an hour)
-                        var age_alpha = result.seconds_ago/3600,
+                        //approaches 2 hours)
+                        var age_alpha = result.seconds_ago / 7200,
                             age_colour = 'rgba(256, 144, 144, '+age_alpha+')';
                         console.log(age_alpha);
 

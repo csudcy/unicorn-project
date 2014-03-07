@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from optparse import OptionParser
 import json
+import operator
 import os
 import signal
 import sys
@@ -115,13 +116,10 @@ class Unicorn(object):
         ).group_by(
             db.Log.site_id,
             db.Log.track_type
-        ).order_by(
-            db.Log.site_id,
-            db.Log.track_type
         ).all()
-        now = time.time()
 
         #Construct the return structure
+        now = time.time()
         out = []
         for al in agg_logs:
             seconds_ago = int(now - al[2])
@@ -134,6 +132,9 @@ class Unicorn(object):
                 'track_type': al.track_type
             })
         db.Session.close()
+
+        #Sort nicely
+        out.sort(key=operator.itemgetter('site_name', 'track_type', 'seconds_ago'))
 
         return json.dumps(out)
 
