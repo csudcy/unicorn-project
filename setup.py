@@ -1,12 +1,10 @@
-"""
-Setup script for courier-server
-Requires GitPython to be installed
-"""
+import os
+import sys
 
-import os, shutil, sys
-from setuptools import setup, find_packages
+from setuptools import setup
+from setuptools import find_packages
+
 from unicorn import __version__
-
 
 def build_data_files_array(dir, ignore_us=[]):
     subdir_list = []
@@ -24,33 +22,6 @@ def build_data_files_array(dir, ignore_us=[]):
             subdir_list.append(current_dir_tuple)
 
     return subdir_list
-
-
-# onerror is taken from pathutils.py, version 0.2.6
-# Functions useful for working with files and paths.
-# http://www.voidspace.org.uk/python/recipebook.shtml#utils
-
-# Copyright Michael Foord 2004
-# Released subject to the BSD License
-# Please see http://www.voidspace.org.uk/python/license.shtml
-def onerror(func, path, exc_info):
-    """
-    Error handler for ``shutil.rmtree``.
-
-    If the error is due to an access error (read only file)
-    it attempts to add write permission and then retries.
-
-    If the error is for another reason it re-raises the error.
-
-    Usage : ``shutil.rmtree(path, onerror=onerror)``
-    """
-    import stat
-    if not os.access(path, os.W_OK):
-        # Is the error an access error ?
-        os.chmod(path, stat.S_IWUSR)
-        func(path)
-    else:
-        raise
 
 # This script builds using the repo that this file is sitting in
 BUILD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))

@@ -1,63 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>Unicorn</title>
-		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
-		<meta name="viewport" content="width=device-width, user-scalable=no">
-		<!--dependencies-->
-		<link href="static/all.css" rel="stylesheet">
+    <head>
+        <meta charset="utf-8">
+        <title>Unicorn</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1"/>
+        <meta name="viewport" content="width=device-width, user-scalable=no">
+        <!--dependencies-->
+        <link href="static/all.css" rel="stylesheet">
 
-	</head>
-	<body>
-		<div class="unicorn"></div>
-		<div class="desciption">Project Unicorn has the following problems:</div>
-		<div class="problems">
-			<table>
-				<thead>
-					<tr>
-						<th>Site</th>
-						<th>Type</th>
-						<th>Age</th>
-					</tr>
-				</thead>
-				<tbody id="problems">
+    </head>
+    <body>
+        <div class="unicorn"></div>
+        <div class="desciption">Project Unicorn has the following problems:</div>
+        <div class="problems">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Site</th>
+                        <th>Type</th>
+                        <th>Age</th>
+                    </tr>
+                </thead>
+                <tbody id="problems">
 
-				</tbody>
-			</table>
-		</div>
-	</body>
-	<script type="text/javascript">
-		function updateProblems() {
-			var xmlhttp = new XMLHttpRequest();
+                </tbody>
+            </table>
+        </div>
+    </body>
+    <script type="text/javascript">
+        function updateProblems() {
+            var xmlhttp = new XMLHttpRequest();
 
-			xmlhttp.onreadystatechange = function() {
-				if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-					var results = JSON.parse(xmlhttp.responseText);
-					//Sort the results nicely
-					results.sort(function(a, b) {
-						if (a.site_name !== b.site_name) {
-							return a.site_name - b.site_name;
-						}
-						return a.track_type - b.track_type;
-					});
-					//Build the html output
-					var html = '';
-					results.forEach(function(result) {
-						html += '<tr>'+
-								'<td>'+result.site_name+' ('+result.site_id+')</td>'+
-								'<td>'+result.track_type+'</td>'+
-								'<td>'+result.time_ago+'</td>'+
-							'</tr>\n';
-					});
-					document.getElementById("problems").innerHTML = html;
-				}
-			}
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var results = JSON.parse(xmlhttp.responseText);
+                    //Sort the results nicely
+                    results.sort(function(a, b) {
+                        if (a.site_name !== b.site_name) {
+                            return a.site_name - b.site_name;
+                        }
+                        return a.track_type - b.track_type;
+                    });
+                    //Build the html output
+                    var html = '';
+                    results.forEach(function(result) {
+                        //Colour code the type column
+                        var track_colour = 'white';
+                        if (result.track_type == 'ProducerPull') {
+                            track_colour = '#99f';
+                        } else if (result.track_type == 'RosettaPull') {
+                            track_colour = '#9f9';
+                        }
 
-			xmlhttp.open("GET", "/aggregate", true);
-			xmlhttp.send();
-		}
-		updateProblems();
-		setInterval(updateProblems, 2*1000);
-	</script>
+                        //Colour code the age column (alpha the colour in as age
+                        //approaches an hour)
+                        var age_alpha = result.seconds_ago/3600,
+                            age_colour = 'rgba(256, 144, 144, '+age_alpha+')';
+                        console.log(age_alpha);
+
+                        //Construct the HTML manually
+                        html += '<tr>'+
+                                '<td>'+result.site_name+' ('+result.site_id+')</td>'+
+                                '<td style="background-color: '+track_colour+'">'+result.track_type+'</td>'+
+                                '<td style="background-color: '+age_colour+'">'+result.time_ago+'</td>'+
+                            '</tr>\n';
+                    });
+                    document.getElementById("problems").innerHTML = html;
+                }
+            }
+
+            xmlhttp.open("GET", "/aggregate", true);
+            xmlhttp.send();
+        }
+        updateProblems();
+        setInterval(updateProblems, 2*1000);
+    </script>
 </html>

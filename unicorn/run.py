@@ -122,13 +122,17 @@ class Unicorn(object):
         now = time.time()
 
         #Construct the return structure
-        out = [{
-            'site_id':al.site_id,
-            'site_name': site_lookup.get(al.site_id, 'Unknown - %s' % al.site_id),
-            'datestamp':al[2],
-            'time_ago': str(timedelta(seconds = int(now - al[2]))),
-            'track_type': al.track_type
-        } for al in agg_logs]
+        out = []
+        for al in agg_logs:
+            seconds_ago = int(now - al[2])
+            out.append({
+                'site_id': al.site_id,
+                'site_name': site_lookup.get(al.site_id, 'Unknown - %s' % al.site_id),
+                'datestamp': al[2],
+                'seconds_ago': seconds_ago,
+                'time_ago': str(timedelta(seconds = seconds_ago)),
+                'track_type': al.track_type
+            })
         db.Session.close()
 
         return json.dumps(out)
